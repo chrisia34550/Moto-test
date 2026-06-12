@@ -14,7 +14,6 @@
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #333; overflow: hidden; }
         #map { height: 60vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
         
-        /* Panneau d'informations SinoTrack Style */
         .status-card {
             height: 40vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
             border-top-left-radius: 24px; border-top-right-radius: 24px;
@@ -24,7 +23,6 @@
         h2 { margin: 0; color: #2c3e50; font-size: 1.2rem; font-weight: 600; }
         .info-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         
-        /* Grille de statistiques comme SinoTrack */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
         .stat-box { background: #f8f9fa; padding: 10px; border-radius: 12px; border: 1px solid #edf2f7; text-align: center; }
         .stat-box span { display: block; font-size: 0.75rem; color: #718096; text-transform: uppercase; margin-bottom: 2px; }
@@ -33,7 +31,6 @@
         .info-line { display: flex; justify-content: space-between; margin-bottom: 6px; color: #555; font-size: 0.85rem; border-bottom: 1px dashed #edf2f7; padding-bottom: 4px; }
         .info-line strong { color: #2c3e50; font-weight: 600; }
         
-        /* Section Alertes de Sécurité */
         .alerts-container { display: flex; gap: 8px; margin-top: 10px; justify-content: space-between; }
         .alert-pill { flex: 1; text-align: center; font-size: 0.7rem; font-weight: bold; padding: 6px 4px; border-radius: 8px; background: #edf2f7; color: #a0aec0; transition: all 0.3s; }
         .alert-pill.active-red { background: #fed7d7; color: #e53e3e; border: 1px solid #e53e3e; }
@@ -42,7 +39,6 @@
         .badge { color: white; padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
         .no-border-icon { background: none !important; border: none !important; }
 
-        /* Bouton tracé */
         .controls-container { position: absolute; top: 10px; left: 10px; z-index: 1000; }
         .custom-btn {
             background: #ffffff; color: #2c3e50; border: none; padding: 10px 16px;
@@ -58,21 +54,18 @@
 </head>
 <body>
 
-    <!-- Carte -->
     <div id="map">
         <div class="controls-container">
             <button id="toggle-history" class="custom-btn" onclick="toggleHistory()">📍 Tracé du jour</button>
         </div>
     </div>
 
-    <!-- Panneau SinoTrack complet -->
     <div class="status-card">
         <div class="info-header">
             <h2 id="device-name">Recherche...</h2>
             <span id="status-badge" class="badge" style="background: #7f8c8d;">Hors ligne</span>
         </div>
 
-        <!-- Blocs de Statistiques SinoTrack -->
         <div class="stats-grid">
             <div class="stat-box">
                 <span>Vitesse</span>
@@ -92,11 +85,9 @@
             </div>
         </div>
 
-        <!-- Infos complémentaires -->
         <div class="info-line"><span>Dernière activité :</span> <strong id="time">-</strong></div>
         <div class="info-line"><span>Position GPS :</span> <strong id="coords">-</strong></div>
 
-        <!-- Tableau de bord des alarmes SinoTrack -->
         <div class="alerts-container">
             <div id="alert-power" class="alert-pill">🔌 Alim OK</div>
             <div id="alert-shock" class="alert-pill">🛡️ Pas de Choc</div>
@@ -120,7 +111,6 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
-        // Événement plein écran automatique au touché de la carte
         window.addEventListener("touchstart", function() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => console.log(err));
@@ -129,8 +119,14 @@
 
         async function updateTracking() {
             try {
+                // CORRECTION ICI : Ajout du mode 'cors' et des credentials requis par Hermit
                 const response = await fetch('https://demo.traccar.org/api/positions', {
-                    headers: { 'Authorization': 'Basic ' + BASE64_TOKEN }
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 
+                        'Authorization': 'Basic ' + BASE64_TOKEN,
+                        'Accept': 'application/json'
+                    }
                 });
                 
                 if (!response.ok) throw new Error("Erreur d'authentification");
@@ -142,7 +138,6 @@
                     const lon = target.longitude;
                     const date = new Date(target.fixTime).toLocaleTimeString('fr-FR');
 
-                    // Gestion de la vitesse et de la stabilité
                     const rawSpeed = Math.round(target.speed * 1.852);
                     const isMoving = target.attributes.hasOwnProperty('motion') ? target.attributes.motion : (rawSpeed > 3);
                     const speedKmh = isMoving ? rawSpeed : 0;
@@ -154,7 +149,6 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // Extraction des attributs SinoTrack (Voltage et distance)
                     let voltage = "-";
                     if (target.attributes.power) voltage = (target.attributes.power).toFixed(1) + " V";
                     else if (target.attributes.batteryLevel) voltage = target.attributes.batteryLevel + " %";
@@ -162,7 +156,6 @@
                     let totalDistance = 0;
                     if (target.attributes.distance) totalDistance = (target.attributes.distance / 1000).toFixed(2);
 
-                    // Mise à jour de l'interface SinoTrack
                     document.getElementById('device-name').innerText = "🏍️ Mon Véhicule";
                     document.getElementById('status-badge').innerText = statusText;
                     document.getElementById('status-badge').style.background = badgeColor;
@@ -173,10 +166,8 @@
                     document.getElementById('time').innerText = date;
                     document.getElementById('coords').innerText = lat.toFixed(5) + ", " + lon.toFixed(5);
 
-                    // Traitement des alertes SinoTrack de sécurité
                     const alarm = target.attributes.alarm || "";
                     
-                    // 1. Alerte coupure câble alimentation principale
                     if (alarm === "powerCut" || target.attributes.power < 11.5) {
                         document.getElementById('alert-power').innerText = "⚠️ COUPURE ALIM";
                         document.getElementById('alert-power').className = "alert-pill active-red";
@@ -185,7 +176,6 @@
                         document.getElementById('alert-power').className = "alert-pill active-green";
                     }
 
-                    // 2. Alerte choc / vibration à l'arrêt
                     if (alarm === "vibration" || alarm === "shock") {
                         document.getElementById('alert-shock').innerText = "⚠️ CHOC DÉTECTÉ";
                         document.getElementById('alert-shock').className = "alert-pill active-red";
@@ -194,7 +184,6 @@
                         document.getElementById('alert-shock').className = "alert-pill active-green";
                     }
 
-                    // 3. Alerte Batterie faible
                     if (alarm === "lowBattery") {
                         document.getElementById('alert-lowbat').innerText = "⚠️ BAT. FAIBLE";
                         document.getElementById('alert-lowbat').className = "alert-pill active-red";
@@ -203,7 +192,6 @@
                         document.getElementById('alert-lowbat').className = "alert-pill active-green";
                     }
 
-                    // Dessin du marqueur de la moto
                     const stableIcon = L.divIcon({
                         html: `
                             <div style="position: relative; width: 42px; height: 42px; text-align: center;">
@@ -242,8 +230,14 @@
                 const fromTime = today.toISOString();
                 const toTime = new Date().toISOString();
 
+                // CORRECTION ICI AUSSI
                 const response = await fetch(`https://demo.traccar.org/api/positions?from=${fromTime}&to=${toTime}`, {
-                    headers: { 'Authorization': 'Basic ' + BASE64_TOKEN }
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 
+                        'Authorization': 'Basic ' + BASE64_TOKEN,
+                        'Accept': 'application/json'
+                    }
                 });
 
                 if (!response.ok) return;
