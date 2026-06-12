@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Mon App de Tracking Pro</title>
+    <title>Mon App de Tracking & Contrôle</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #333; overflow: hidden; }
-        #map { height: 52vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
+        #map { height: 50vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
         
         .status-card {
-            height: 48vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
+            height: 50vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
             border-top-left-radius: 24px; border-top-right-radius: 24px;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.1); position: relative; z-index: 1000;
             overflow-y: auto;
@@ -30,18 +30,14 @@
 
         .info-line { display: flex; justify-content: space-between; margin-bottom: 6px; color: #555; font-size: 0.85rem; border-bottom: 1px dashed #edf2f7; padding-bottom: 4px; }
         .info-line strong { color: #2c3e50; font-weight: 600; }
-        
-        .alerts-container { display: flex; gap: 8px; margin-top: 10px; justify-content: space-between; margin-bottom: 15px; }
-        .alert-pill { flex: 1; text-align: center; font-size: 0.7rem; font-weight: bold; padding: 6px 4px; border-radius: 8px; background: #edf2f7; color: #a0aec0; transition: all 0.3s; }
-        .alert-pill.active-red { background: #fed7d7; color: #e53e3e; border: 1px solid #e53e3e; }
-        .alert-pill.active-green { background: #c6f6d5; color: #22543d; }
 
-        .command-section { border-top: 1px solid #edf2f7; padding-top: 12px; margin-top: 10px; }
-        .command-title { font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* SECTION COMMANDES SINOTRACK */
+        .command-section { border-top: 2px solid #edf2f7; padding-top: 12px; margin-top: 12px; }
+        .command-title { font-size: 0.85rem; font-weight: bold; color: #e67e22; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px; }
         .command-row { display: flex; gap: 8px; }
         .cmd-select { flex: 2; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e0; background: #fff; font-size: 0.9rem; color: #2d3748; }
-        .cmd-btn { flex: 1; background: #3182ce; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
-        .cmd-btn:hover { background: #2b6cb0; }
+        .cmd-btn { flex: 1; background: #e67e22; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
+        .cmd-btn:hover { background: #d35400; }
 
         .badge { color: white; padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
         .no-border-icon { background: none !important; border: none !important; }
@@ -69,7 +65,7 @@
 
     <div class="status-card">
         <div class="info-header">
-            <h2 id="device-name">Recherche...</h2>
+            <h2 id="device-name">Mon App de Tracking</h2>
             <span id="status-badge" class="badge" style="background: #7f8c8d;">Hors ligne</span>
         </div>
 
@@ -79,8 +75,8 @@
                 <strong id="speed">0 km/h</strong>
             </div>
             <div class="stat-box">
-                <span>Batterie Moto</span>
-                <strong id="battery-volts">- V</strong>
+                <span>Altitude</span>
+                <strong id="altitude">- m</strong>
             </div>
             <div class="stat-box">
                 <span>Distance Jour</span>
@@ -94,21 +90,19 @@
 
         <div class="info-line"><span>Dernière activité :</span> <strong id="time">-</strong></div>
         <div class="info-line"><span>Position GPS :</span> <strong id="coords">-</strong></div>
+        <div class="info-line"><span>Cap / Orientation :</span> <strong id="course">-</strong></div>
+        <div class="info-line"><span>Signal GPS :</span> <strong id="gps-valid">Recherche...</strong></div>
 
-        <div class="alerts-container">
-            <div id="alert-power" class="alert-pill">🔌 Alim OK</div>
-            <div id="alert-shock" class="alert-pill">🛡️ Pas de Choc</div>
-            <div id="alert-lowbat" class="alert-pill">🔋 Bat OK</div>
-        </div>
-
-        <!-- SECTION ACTIONS AVEC LE BON DEVICE_ID -->
+        <!-- BLOC DE COMMANDES COMPLET SINOTRACK -->
         <div class="command-section">
-            <div class="command-title">⚡ Commandes SinoTrack</div>
+            <div class="command-title">⚡ Commandes SinoTrack Actives</div>
             <div class="command-row">
                 <select id="command-select" class="cmd-select">
-                    <option value="6690000">📍 Demander Position Actuelle</option>
-                    <option value="9400000">🛑 Coup de circuit (Arrêt Moteur)</option>
-                    <option value="9410000">🟢 Rétablir Circuit (Démarrage OK)</option>
+                    <option value="6690000">📍 Demander Position SMS Actuelle (6690000)</option>
+                    <option value="9400000">🛑 Coupure Relais / Arrêt Moteur (9400000)</option>
+                    <option value="9410000">🟢 Rétablir Relais / Autoriser Démarrage (9410000)</option>
+                    <option value="CQ">🔄 Redémarrer le traceur (CQ)</option>
+                    <option value="RCONF">📋 Demander la configuration actuelle (RCONF)</option>
                 </select>
                 <button class="cmd-btn" onclick="sendSinoCommand()">Envoyer</button>
             </div>
@@ -118,7 +112,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const BASE64_TOKEN = "Y2hyaXNpYWNocmlzQGdtYWlsLmNvbTo0Nzc4MDA2Q2E/"; 
-        const DEVICE_ID = 61250; // Mis à jour avec l'ID de image_5e2d19.png
+        const DEVICE_ID = 61250; // Ton deviceId extrait de image_5e2d19.png
 
         const map = L.map('map', { zoomControl: false }).setView([43.3614, 3.4167], 15);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -163,51 +157,23 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    let voltage = "-";
-                    if (target.attributes.hasOwnProperty('power')) {
-                        voltage = parseFloat(target.attributes.power).toFixed(1) + " V";
-                    } else if (target.attributes.hasOwnProperty('batteryLevel')) {
-                        voltage = target.attributes.batteryLevel + " %";
-                    }
+                    let alt = target.altitude ? Math.round(target.altitude) + " m" : "- m";
+                    let course = target.course ? target.course + "°" : "-";
+                    let validGps = target.valid ? "🟢 Fixé (Valide)" : "🔴 Signal Faible";
 
                     let totalDistance = 0;
                     if (target.attributes.distance) totalDistance = (target.attributes.distance / 1000).toFixed(2);
 
-                    document.getElementById('device-name').innerText = "Mon Véhicule";
                     document.getElementById('status-badge').innerText = statusText;
                     document.getElementById('status-badge').style.background = badgeColor;
                     document.getElementById('speed').innerText = speedKmh + " km/h";
                     document.getElementById('max-speed').innerText = dailyMaxSpeed + " km/h";
-                    document.getElementById('battery-volts').innerText = voltage;
+                    document.getElementById('altitude').innerText = alt;
                     document.getElementById('day-distance').innerText = totalDistance + " km";
                     document.getElementById('time').innerText = date;
                     document.getElementById('coords').innerText = lat.toFixed(5) + ", " + lon.toFixed(5);
-
-                    const alarm = target.attributes.alarm || "";
-                    
-                    if (alarm === "powerCut" || (target.attributes.power && target.attributes.power < 11.5)) {
-                        document.getElementById('alert-power').innerText = "⚠️ COUPURE ALIM";
-                        document.getElementById('alert-power').className = "alert-pill active-red";
-                    } else {
-                        document.getElementById('alert-power').innerText = "🔌 Alim OK";
-                        document.getElementById('alert-power').className = "alert-pill active-green";
-                    }
-
-                    if (alarm === "vibration" || alarm === "shock") {
-                        document.getElementById('alert-shock').innerText = "⚠️ CHOC DÉTECTÉ";
-                        document.getElementById('alert-shock').className = "alert-pill active-red";
-                    } else {
-                        document.getElementById('alert-shock').innerText = "🛡️ Pas de Choc";
-                        document.getElementById('alert-shock').className = "alert-pill active-green";
-                    }
-
-                    if (alarm === "lowBattery") {
-                        document.getElementById('alert-lowbat').innerText = "⚠️ BAT. FAIBLE";
-                        document.getElementById('alert-lowbat').className = "alert-pill active-red";
-                    } else {
-                        document.getElementById('alert-lowbat').innerText = "🔋 Bat OK";
-                        document.getElementById('alert-lowbat').className = "alert-pill active-green";
-                    }
+                    document.getElementById('course').innerText = course;
+                    document.getElementById('gps-valid').innerText = validGps;
 
                     const stableIcon = L.divIcon({
                         html: `
@@ -238,7 +204,7 @@
             }
         }
 
-        // ENVOI SÉCURISÉ EN MODE TEXTE BRUT POUR TOUS PROTOCOLES (OSMAND INCLUS)
+        // ENVOI SÉCURISÉ VIA L'API DE TRACCAR EN TECHNIQUE PERSONNALISÉE (CUSTOM)
         async function sendSinoCommand() {
             const rawCode = document.getElementById('command-select').value;
             
@@ -262,9 +228,9 @@
                     });
 
                     if (response.ok || response.status === 202) {
-                        alert("✅ Commande relayée avec succès !");
+                        alert("✅ Commande envoyée au serveur Traccar !");
                     } else {
-                        alert("❌ Échec de l'envoi. Code d'erreur serveur.");
+                        alert("❌ Échec de l'envoi. Erreur serveur.");
                     }
                 } catch (error) {
                     alert("Erreur réseau : " + error);
@@ -314,7 +280,7 @@
         }
 
         updateTracking();
-        setInterval(updateTracking, 15000);
+        setInterval(updateTracking, 15000); // Mise à jour toutes les 15 secondes
     </script>
 </body>
 </html>
