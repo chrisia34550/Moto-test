@@ -111,15 +111,8 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
-        window.addEventListener("touchstart", function() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => console.log(err));
-            }
-        }, { once: true });
-
         async function updateTracking() {
             try {
-                // CORRECTION ICI : Ajout du mode 'cors' et des credentials requis par Hermit
                 const response = await fetch('https://demo.traccar.org/api/positions', {
                     method: 'GET',
                     mode: 'cors',
@@ -149,9 +142,13 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
+                    // OPTIMISATION BATTERIE MOTO (Priorité aux Volts si dispo)
                     let voltage = "-";
-                    if (target.attributes.power) voltage = (target.attributes.power).toFixed(1) + " V";
-                    else if (target.attributes.batteryLevel) voltage = target.attributes.batteryLevel + " %";
+                    if (target.attributes.hasOwnProperty('power')) {
+                        voltage = parseFloat(target.attributes.power).toFixed(1) + " V";
+                    } else if (target.attributes.hasOwnProperty('batteryLevel')) {
+                        voltage = target.attributes.batteryLevel + " %";
+                    }
 
                     let totalDistance = 0;
                     if (target.attributes.distance) totalDistance = (target.attributes.distance / 1000).toFixed(2);
@@ -168,7 +165,7 @@
 
                     const alarm = target.attributes.alarm || "";
                     
-                    if (alarm === "powerCut" || target.attributes.power < 11.5) {
+                    if (alarm === "powerCut" || (target.attributes.power && target.attributes.power < 11.5)) {
                         document.getElementById('alert-power').innerText = "⚠️ COUPURE ALIM";
                         document.getElementById('alert-power').className = "alert-pill active-red";
                     } else {
@@ -230,7 +227,6 @@
                 const fromTime = today.toISOString();
                 const toTime = new Date().toISOString();
 
-                // CORRECTION ICI AUSSI
                 const response = await fetch(`https://demo.traccar.org/api/positions?from=${fromTime}&to=${toTime}`, {
                     method: 'GET',
                     mode: 'cors',
