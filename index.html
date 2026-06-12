@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #333; overflow: hidden; }
-        #map { height: 60vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
+        #map { height: 52vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
         
         .status-card {
-            height: 40vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
+            height: 48vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
             border-top-left-radius: 24px; border-top-right-radius: 24px;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.1); position: relative; z-index: 1000;
             overflow-y: auto;
@@ -31,10 +31,17 @@
         .info-line { display: flex; justify-content: space-between; margin-bottom: 6px; color: #555; font-size: 0.85rem; border-bottom: 1px dashed #edf2f7; padding-bottom: 4px; }
         .info-line strong { color: #2c3e50; font-weight: 600; }
         
-        .alerts-container { display: flex; gap: 8px; margin-top: 10px; justify-content: space-between; }
+        .alerts-container { display: flex; gap: 8px; margin-top: 10px; justify-content: space-between; margin-bottom: 15px; }
         .alert-pill { flex: 1; text-align: center; font-size: 0.7rem; font-weight: bold; padding: 6px 4px; border-radius: 8px; background: #edf2f7; color: #a0aec0; transition: all 0.3s; }
         .alert-pill.active-red { background: #fed7d7; color: #e53e3e; border: 1px solid #e53e3e; }
         .alert-pill.active-green { background: #c6f6d5; color: #22543d; }
+
+        .command-section { border-top: 1px solid #edf2f7; padding-top: 12px; margin-top: 10px; }
+        .command-title { font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .command-row { display: flex; gap: 8px; }
+        .cmd-select { flex: 2; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e0; background: #fff; font-size: 0.9rem; color: #2d3748; }
+        .cmd-btn { flex: 1; background: #3182ce; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
+        .cmd-btn:hover { background: #2b6cb0; }
 
         .badge { color: white; padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
         .no-border-icon { background: none !important; border: none !important; }
@@ -93,11 +100,25 @@
             <div id="alert-shock" class="alert-pill">🛡️ Pas de Choc</div>
             <div id="alert-lowbat" class="alert-pill">🔋 Bat OK</div>
         </div>
+
+        <!-- SECTION ACTIONS AVEC LE BON DEVICE_ID -->
+        <div class="command-section">
+            <div class="command-title">⚡ Commandes SinoTrack</div>
+            <div class="command-row">
+                <select id="command-select" class="cmd-select">
+                    <option value="6690000">📍 Demander Position Actuelle</option>
+                    <option value="9400000">🛑 Coup de circuit (Arrêt Moteur)</option>
+                    <option value="9410000">🟢 Rétablir Circuit (Démarrage OK)</option>
+                </select>
+                <button class="cmd-btn" onclick="sendSinoCommand()">Envoyer</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const BASE64_TOKEN = "Y2hyaXNpYWNocmlzQGdtYWlsLmNvbTo0Nzc4MDA2Q2E/"; 
+        const DEVICE_ID = 61250; // Mis à jour avec l'ID de image_5e2d19.png
 
         const map = L.map('map', { zoomControl: false }).setView([43.3614, 3.4167], 15);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -142,7 +163,6 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // OPTIMISATION BATTERIE MOTO (Priorité aux Volts si dispo)
                     let voltage = "-";
                     if (target.attributes.hasOwnProperty('power')) {
                         voltage = parseFloat(target.attributes.power).toFixed(1) + " V";
@@ -153,7 +173,7 @@
                     let totalDistance = 0;
                     if (target.attributes.distance) totalDistance = (target.attributes.distance / 1000).toFixed(2);
 
-                    document.getElementById('device-name').innerText = "🏍️ Mon Véhicule";
+                    document.getElementById('device-name').innerText = "Mon Véhicule";
                     document.getElementById('status-badge').innerText = statusText;
                     document.getElementById('status-badge').style.background = badgeColor;
                     document.getElementById('speed').innerText = speedKmh + " km/h";
@@ -211,12 +231,44 @@
                         map.setView([lat, lon], 15);
                     }
 
-                    if (isHistoryVisible) {
-                        drawHistory();
-                    }
+                    if (isHistoryVisible) drawHistory();
                 }
             } catch (error) {
                 console.error("Erreur API:", error);
+            }
+        }
+
+        // ENVOI SÉCURISÉ EN MODE TEXTE BRUT POUR TOUS PROTOCOLES (OSMAND INCLUS)
+        async function sendSinoCommand() {
+            const rawCode = document.getElementById('command-select').value;
+            
+            let payload = {
+                deviceId: DEVICE_ID,
+                type: "custom",
+                attributes: { data: rawCode }
+            };
+
+            if (confirm("Confirmer l'envoi de l'ordre au traceur ?")) {
+                try {
+                    const response = await fetch('https://demo.traccar.org/api/commands/send', {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: {
+                            'Authorization': 'Basic ' + BASE64_TOKEN,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok || response.status === 202) {
+                        alert("✅ Commande relayée avec succès !");
+                    } else {
+                        alert("❌ Échec de l'envoi. Code d'erreur serveur.");
+                    }
+                } catch (error) {
+                    alert("Erreur réseau : " + error);
+                }
             }
         }
 
@@ -230,10 +282,7 @@
                 const response = await fetch(`https://demo.traccar.org/api/positions?from=${fromTime}&to=${toTime}`, {
                     method: 'GET',
                     mode: 'cors',
-                    headers: { 
-                        'Authorization': 'Basic ' + BASE64_TOKEN,
-                        'Accept': 'application/json'
-                    }
+                    headers: { 'Authorization': 'Basic ' + BASE64_TOKEN, 'Accept': 'application/json' }
                 });
 
                 if (!response.ok) return;
@@ -247,9 +296,7 @@
                         color: '#e74c3c', weight: 5, opacity: 0.8, lineJoin: 'round'
                     }).addTo(map);
                 }
-            } catch (error) {
-                console.error(error);
-            }
+            } catch (error) { console.error(error); }
         }
 
         function toggleHistory() {
