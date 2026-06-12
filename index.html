@@ -2,16 +2,17 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Mon App de Tracking</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-touch-fullscreen" content="yes">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #333; overflow: hidden; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #333; overflow: hidden; }
         #map { height: 75vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
         
         /* Panneau d'informations style clair */
@@ -99,6 +100,19 @@
         let historyLayer = null; 
         let isHistoryVisible = false;
 
+        // ASTUCE CHOC : Force le navigateur Android à masquer ses barres au premier clic sur l'écran
+        window.addEventListener("click", function() {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            } else if (document.documentElement.mozRequestFullScreen) { /* Firefox */
+                document.documentElement.mozRequestFullScreen();
+            } else if (document.documentElement.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+                document.documentElement.webkitRequestFullscreen();
+            } else if (document.documentElement.msRequestFullscreen) { /* IE/Edge */
+                document.documentElement.msRequestFullscreen();
+            }
+        }, { once: true }); // Ne s'exécute qu'une seule fois au premier contact
+
         // 1. MISE À JOUR DE LA POSITION EN DIRECT
         async function updateTracking() {
             try {
@@ -122,14 +136,13 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    document.getElementById('device-name').innerText = "🏍️ Mon Véhicule";
+                    document.getElementById('device-name').innerText = " Mon Véhicule";
                     document.getElementById('status-badge').innerText = statusText;
                     document.getElementById('status-badge').style.background = badgeColor;
                     document.getElementById('speed').innerText = speedKmh + " km/h";
                     document.getElementById('time').innerText = date;
                     document.getElementById('coords').innerText = lat.toFixed(5) + ", " + lon.toFixed(5);
 
-                    // Nouvelle icône de Moto en dessin SVG (Universel Android/PC)
                     const stableIcon = L.divIcon({
                         html: `
                             <div style="position: relative; width: 42px; height: 42px; text-align: center;">
