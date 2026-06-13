@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #333; overflow: hidden; }
-        #map { height: 50vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
+        #map { height: 45vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
         
         .status-card {
-            height: 50vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
+            height: 55vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
             border-top-left-radius: 24px; border-top-right-radius: 24px;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.1); position: relative; z-index: 1000;
             overflow-y: auto;
@@ -64,6 +64,9 @@
         .radar-pulse { position: absolute; width: 12px; height: 12px; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: -1; }
         .radar-pulse::after { content: ''; position: absolute; width: 100%; height: 100%; background: inherit; border-radius: 50%; animation: radar-glow 2s infinite ease-out; top: 0; left: 0; }
         @keyframes radar-glow { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3.5); opacity: 0; } }
+
+        /* Style pour la zone de diagnostic */
+        .debug-box { background: #1e272e; color: #2ecc71; font-family: monospace; font-size: 0.7rem; padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 80px; overflow-y: auto; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -87,7 +90,10 @@
             <div class="stat-box"><span>Vitesse Max</span><strong id="max-speed">0 km/h</strong></div>
         </div>
 
-        <div class="info-line"><span>Dernière activité :</span> <strong id="time">-</strong></div>
+        <div class="info-line" style="border: none;"><span>Données brutes reçues :</span></div>
+        <div id="debug-attributes" class="debug-box">En attente de données...</div>
+
+        <div class="info-line" style="margin-top: 10px;"><span>Dernière activité :</span> <strong id="time">-</strong></div>
         <div class="info-line"><span>Position GPS :</span> <strong id="coords">-</strong></div>
 
         <div class="alerts-container">
@@ -127,10 +133,11 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
-        // RETOUR À LA MÉTHODE DIRECTE POUR LES SMS
+        // NOUVELLE STRATÉGIE SMS : window.open pour forcer la sortie de la WebApp/Chrome
         function envoyerSMS() {
             const command = document.getElementById('sms-action').value;
-            window.location.href = "sms:" + NUMERO_MOTO + "?body=" + command;
+            const url = "sms:" + NUMERO_MOTO + "?body=" + encodeURIComponent(command);
+            window.open(url, '_blank');
         }
 
         async function updateTracking() {
@@ -165,18 +172,20 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // RETOUR À LA LECTURE DIRECTE BRUTE DE LA BATTERIE
+                    // Extraction et affichage brut des attributs pour le diagnostic à l'écran
+                    let attrs = target.attributes || {};
+                    document.getElementById('debug-attributes').innerText = JSON.stringify(attrs);
+
+                    // Tentative de lecture automatique de la batterie
                     let voltage = "-";
-                    let attrs = target.attributes;
-                    
-                    if (attrs) {
-                        if (attrs.batteryLevel) {
-                            voltage = attrs.batteryLevel + " %";
-                        } else if (attrs.battery) {
-                            voltage = attrs.battery + " %";
-                        } else if (attrs.power) {
-                            voltage = attrs.power + " V";
-                        }
+                    if (attrs.hasOwnProperty('batteryLevel')) {
+                        voltage = attrs.batteryLevel + " %";
+                    } else if (attrs.hasOwnProperty('battery')) {
+                        voltage = attrs.battery + " %";
+                    } else if (attrs.hasOwnProperty('power')) {
+                        voltage = attrs.power + " V";
+                    } else if (attrs.hasOwnProperty('adc1')) {
+                        voltage = attrs.adc1 + " V";
                     }
 
                     document.getElementById('device-name').innerText = "🏍️ Mon Véhicule";
