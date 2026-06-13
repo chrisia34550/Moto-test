@@ -111,10 +111,8 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. METS LE NUMÉRO DE LA CARTE SIM DE TA MOTO ICI
-        const NUMERO_MOTO = "TON_NUMERO_DE_PORTABLE_SIM_MOTO"; 
-
-        // 2. RECOLE ICI TON NOUVEAU JETON BASE64 GÉNÉRÉ DEPUIS TES IDENTIFIANTS DEMO4
+        // Configuration validée
+        const NUMERO_MOTO = "+33759671722"; 
         const BASE64_TOKEN = "bWFydGluZWNocmlzQGZyZWUuZnI6NDc3ODAwNkNhPw=="; 
 
         const map = L.map('map', { zoomControl: false }).setView([43.3614, 3.4167], 15);
@@ -132,13 +130,6 @@
         function prepareSMS(event) {
             const select = document.getElementById('sms-action');
             const command = select.value;
-            
-            if (NUMERO_MOTO === "+33759671722") {
-                alert("N'oublie pas de configurer le numéro de téléphone de la moto dans le code !");
-                event.preventDefault();
-                return;
-            }
-            
             document.getElementById('send-sms-link').href = `sms:${NUMERO_MOTO}?body=${command}`;
         }
 
@@ -176,7 +167,6 @@
                     let voltage = "-";
                     let attrs = target.attributes;
                     
-                    // Lecture prioritaire de la vraie tension d'alimentation en Volts (V)
                     if (attrs.hasOwnProperty('power') && attrs.power > 5) {
                         voltage = parseFloat(attrs.power).toFixed(1) + " V";
                     } else if (attrs.hasOwnProperty('battery') && attrs.battery > 5) {
@@ -187,124 +177,16 @@
                         voltage = attrs.batteryLevel + " %";
                     }
 
-                    let totalDistance = 0;
-                    if (attrs.distance) totalDistance = (attrs.distance / 1000).toFixed(2);
-
-                    document.getElementById('device-name').innerText = "🏍️ Mon Véhicule";
+                    document.getElementById('device-name').innerText = "Mon Véhicule";
                     document.getElementById('status-badge').innerText = statusText;
                     document.getElementById('status-badge').style.background = badgeColor;
                     document.getElementById('speed').innerText = speedKmh + " km/h";
                     document.getElementById('max-speed').innerText = dailyMaxSpeed + " km/h";
                     document.getElementById('battery-volts').innerText = voltage;
-                    document.getElementById('day-distance').innerText = totalDistance + " km";
-                    document.getElementById('time').innerText = date;
-                    document.getElementById('coords').innerText = lat.toFixed(5) + ", " + lon.toFixed(5);
-
-                    const alarm = attrs.alarm || "";
                     
-                    if (alarm === "powerCut" || (attrs.power && attrs.power < 11.5)) {
-                        document.getElementById('alert-power').innerText = "⚠️ COUPURE ALIM";
-                        document.getElementById('alert-power').className = "alert-pill active-red";
-                    } else {
-                        document.getElementById('alert-power').innerText = "🔌 Alim OK";
-                        document.getElementById('alert-power').className = "alert-pill active-green";
-                    }
-
-                    if (alarm === "vibration" || alarm === "shock") {
-                        document.getElementById('alert-shock').innerText = "⚠️ CHOC DÉTECTÉ";
-                        document.getElementById('alert-shock').className = "alert-pill active-red";
-                    } else {
-                        document.getElementById('alert-shock').innerText = "🛡️ Pas de Choc";
-                        document.getElementById('alert-shock').className = "alert-pill active-green";
-                    }
-
-                    if (alarm === "lowBattery") {
-                        document.getElementById('alert-lowbat').innerText = "⚠️ BAT. FAIBLE";
-                        document.getElementById('alert-lowbat').className = "alert-pill active-red";
-                    } else {
-                        document.getElementById('alert-lowbat').innerText = "🔋 Bat OK";
-                        document.getElementById('alert-lowbat').className = "alert-pill active-green";
-                    }
-
-                    const stableIcon = L.divIcon({
-                        html: `
-                            <div style="position: relative; width: 42px; height: 42px; text-align: center;">
-                                <div class="radar-pulse" style="background: ${badgeColor};"></div>
-                                <svg style="width: 34px; height: 34px; margin-top: 4px; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4));" viewBox="0 0 24 24">
-                                    <path fill="#2c3e50" d="M19.5,14c-1.4,0-2.5,1.1-2.5,2.5c0,1.4,1.1,2.5,2.5,2.5s2.5-1.1,2.5-2.5C22,15.1,20.9,14,19.5,14z M19.5,18c-0.8,0-1.5-0.7-1.5-1.5s0.7-1.5,1.5-1.5s1.5,0.7,1.5,1.5S20.3,18,19.5,18z M4.5,14C3.1,14,2,15.1,2,16.5C2,17.9,3.1,19,4.5,19S7,17.9,7,16.5C7,15.1,5.9,14,4.5,14z M4.5,18C3.7,18,3,17.3,3,16.5S3.7,15,4.5,15S6,15.7,6,16.5S5.3,18,4.5,18z M17.4,11l-2.2-4H11V5h2V3h-4v2h2v2H7.8L5.3,11H2v2h4.2l1.1-2h6.3l1.9,3.5c-0.3,0.5-0.5,1-0.5,1.5c0,0.3,0.1,0.7,0.2,1h2.1c-0.2-0.3-0.3-0.6-0.3-1c0-0.8,0.7-1.5,1.5-1.5h1.2l-2.4-4.5H17.4z"/>
-                                </svg>
-                            </div>
-                        `,
-                        iconSize: [42, 42],
-                        iconAnchor: [21, 21],
-                        className: 'no-border-icon'
-                    });
-
-                    if (vehicleMarker) {
-                        vehicleMarker.setLatLng([lat, lon]);
-                        vehicleMarker.setIcon(stableIcon);
-                    } else {
-                        vehicleMarker = L.marker([lat, lon], { icon: stableIcon }).addTo(map);
-                        map.setView([lat, lon], 15);
-                    }
-
-                    if (isHistoryVisible) {
-                        drawHistory();
-                    }
-                }
-            } catch (error) {
-                console.error("Erreur API:", error);
-            }
-        }
-
-        async function drawHistory() {
-            try {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const fromTime = today.toISOString();
-                const toTime = new Date().toISOString();
-
-                const response = await fetch(`https://demo4.traccar.org/api/positions?from=${fromTime}&to=${toTime}`, {
-                    method: 'GET',
-                    mode: 'cors',
-                    headers: { 
-                        'Authorization': 'Basic ' + BASE64_TOKEN,
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) return;
-                const positions = await response.json();
-
-                if (positions.length > 0) {
-                    const latLngs = positions.map(p => [p.latitude, p.longitude]);
-                    if (historyLayer) map.removeLayer(historyLayer);
-
-                    historyLayer = L.polyline(latLngs, {
-                        color: '#e74c3c', weight: 5, opacity: 0.8, lineJoin: 'round'
-                    }).addTo(map);
-                }
-            } catch (error) {
-                console.error(error);
-            }
-        }
-
-        function toggleHistory() {
-            const btn = document.getElementById('toggle-history');
-            isHistoryVisible = !isHistoryVisible;
-            if (isHistoryVisible) {
-                btn.innerText = "❌ Tracé";
-                btn.classList.add('active');
-                drawHistory();
-            } else {
-                btn.innerText = "📍 Tracé du jour";
-                btn.classList.remove('active');
-                if (historyLayer) { map.removeLayer(historyLayer); historyLayer = null; }
-            }
-        }
-
-        updateTracking();
-        setInterval(updateTracking, 15000);
-    </script>
-</body>
-</html>
+                    let totalDistance = 0;
+                    if (attrs.distance) totalDistance = (attrs.distance / 1000).toFixed(2);
+                    document.getElementById('day-distance').innerText = totalDistance + " km";
+                    
+                    document.getElementById('time').innerText = date;
+                    document.getElementById('
