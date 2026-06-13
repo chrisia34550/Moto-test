@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #333; overflow: hidden; }
-        #map { height: 45vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
+        #map { height: 50vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
         
         .status-card {
-            height: 55vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
+            height: 50vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
             border-top-left-radius: 24px; border-top-right-radius: 24px;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.1); position: relative; z-index: 1000;
             overflow-y: auto;
@@ -43,11 +43,13 @@
             font-size: 0.85rem; background: #f8f9fa; color: #2d3748; outline: none;
             box-sizing: border-box;
         }
+        
+        /* Style du bouton réparé */
         .send-btn { 
             width: 100%; background: #3498db; color: white; padding: 12px; border-radius: 10px; 
             border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer;
             text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            box-sizing: border-box; display: block;
+            box-sizing: border-box; display: block; text-decoration: none;
         }
 
         .badge { color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
@@ -64,9 +66,6 @@
         .radar-pulse { position: absolute; width: 12px; height: 12px; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: -1; }
         .radar-pulse::after { content: ''; position: absolute; width: 100%; height: 100%; background: inherit; border-radius: 50%; animation: radar-glow 2s infinite ease-out; top: 0; left: 0; }
         @keyframes radar-glow { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3.5); opacity: 0; } }
-
-        /* Style pour la zone de diagnostic */
-        .debug-box { background: #1e272e; color: #2ecc71; font-family: monospace; font-size: 0.7rem; padding: 10px; border-radius: 8px; margin-top: 10px; max-height: 80px; overflow-y: auto; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -79,8 +78,8 @@
 
     <div class="status-card">
         <div class="info-header">
-            <h2 id="device-name">Recherche...</h2>
-            <span id="status-badge" class="badge" style="background: #7f8c8d;">Hors ligne</span>
+            <h2 id="device-name">🏍️ Mon Véhicule</h2>
+            <span id="status-badge" class="badge" style="background: #2980b9;">Stationné</span>
         </div>
 
         <div class="stats-grid">
@@ -90,10 +89,7 @@
             <div class="stat-box"><span>Vitesse Max</span><strong id="max-speed">0 km/h</strong></div>
         </div>
 
-        <div class="info-line" style="border: none;"><span>Données brutes reçues :</span></div>
-        <div id="debug-attributes" class="debug-box">En attente de données...</div>
-
-        <div class="info-line" style="margin-top: 10px;"><span>Dernière activité :</span> <strong id="time">-</strong></div>
+        <div class="info-line"><span>Dernière activité :</span> <strong id="time">-</strong></div>
         <div class="info-line"><span>Position GPS :</span> <strong id="coords">-</strong></div>
 
         <div class="alerts-container">
@@ -104,14 +100,15 @@
 
         <h3>⚡ Commandes Sinotrack Actives</h3>
         <div class="action-container">
-            <select id="sms-action" class="custom-select">
+            <select id="sms-action" class="custom-select" onchange="preparerSMS()">
                 <option value="RCONF">📋 Demander la configuration actuelle (RCONF)</option>
                 <option value="6690000">📍 Demander Position SMS Actuelle (6690000)</option>
                 <option value="9400000">🛑 Coupure Relais / Arrêt Moteur (9400000)</option>
                 <option value="9410000">🟢 Rétablir Relais / Autoriser Démarrage (9410000)</option>
                 <option value="CQ">🔄 Redémarrer le traceur (CQ)</option>
             </select>
-            <button class="send-btn" onclick="envoyerSMS()">Envoyer le SMS</button>
+            
+            <a id="send-sms-link" href="sms:+33759671722?body=RCONF" class="send-btn">Envoyer le SMS</a>
         </div>
     </div>
 
@@ -121,7 +118,7 @@
         const BASE64_TOKEN = "bWFydGluZWNocmlzQGZyZWUuZnI6NDc3ODAwNkNhPw=="; 
         const IMEI_MOTO = "9171070882"; 
 
-        const map = L.map('map', { zoomControl: false }).setView([43.3614, 3.4167], 15);
+        const map = L.map('map', { zoomControl: false }).setView([43.36489, 3.41575], 15);
         L.control.zoom({ position: 'topright' }).addTo(map);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -133,11 +130,11 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
-        // NOUVELLE STRATÉGIE SMS : window.open pour forcer la sortie de la WebApp/Chrome
-        function envoyerSMS() {
+        // MISE À JOUR DYNAMIQUE DU LIEN SMS POUR ÉVITER LE BLOCAGE CHROME
+        function preparerSMS() {
             const command = document.getElementById('sms-action').value;
-            const url = "sms:" + NUMERO_MOTO + "?body=" + encodeURIComponent(command);
-            window.open(url, '_blank');
+            const link = document.getElementById('send-sms-link');
+            link.href = "sms:" + NUMERO_MOTO + "?body=" + command;
         }
 
         async function updateTracking() {
@@ -151,10 +148,11 @@
                     }
                 });
                 
-                if (!response.ok) throw new Error("Erreur d'authentification");
+                if (!response.ok) throw new Error("Erreur API Traccar");
                 const positions = await response.json();
                 
-                const target = positions.find(p => String(p.deviceUniqueId) === IMEI_MOTO || String(p.deviceId) === "61250");
+                // On cible l'ID d'appareil 61250 correspondant à ta session active
+                const target = positions.find(p => String(p.deviceId) === "61250" || String(p.deviceUniqueId) === IMEI_MOTO);
                 
                 if (target) {
                     const lat = target.latitude;
@@ -172,23 +170,18 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // Extraction et affichage brut des attributs pour le diagnostic à l'écran
+                    // CALCUL ET LECTURE DE LA BATTERIE MOTO / INTERNE
+                    let voltage = "- V";
                     let attrs = target.attributes || {};
-                    document.getElementById('debug-attributes').innerText = JSON.stringify(attrs);
-
-                    // Tentative de lecture automatique de la batterie
-                    let voltage = "-";
-                    if (attrs.hasOwnProperty('batteryLevel')) {
+                    
+                    if (attrs.power !== undefined) {
+                        voltage = parseFloat(attrs.power).toFixed(1) + " V";
+                    } else if (attrs.battery !== undefined) {
+                        voltage = parseFloat(attrs.battery).toFixed(1) + " V";
+                    } else if (attrs.batteryLevel !== undefined) {
                         voltage = attrs.batteryLevel + " %";
-                    } else if (attrs.hasOwnProperty('battery')) {
-                        voltage = attrs.battery + " %";
-                    } else if (attrs.hasOwnProperty('power')) {
-                        voltage = attrs.power + " V";
-                    } else if (attrs.hasOwnProperty('adc1')) {
-                        voltage = attrs.adc1 + " V";
                     }
 
-                    document.getElementById('device-name').innerText = "🏍️ Mon Véhicule";
                     document.getElementById('status-badge').innerText = statusText;
                     document.getElementById('status-badge').style.background = badgeColor;
                     document.getElementById('speed').innerText = speedKmh + " km/h";
@@ -255,7 +248,7 @@
                     }
                 }
             } catch (error) {
-                console.error("Erreur API:", error);
+                console.error(error);
             }
         }
 
@@ -277,8 +270,7 @@
 
                 if (!response.ok) return;
                 const positions = await response.json();
-
-                const filteredPositions = positions.filter(p => String(p.deviceUniqueId) === IMEI_MOTO || String(p.deviceId) === "61250");
+                const filteredPositions = positions.filter(p => String(p.deviceId) === "61250");
 
                 if (filteredPositions.length > 0) {
                     const latLngs = filteredPositions.map(p => [p.latitude, p.longitude]);
@@ -307,6 +299,8 @@
             }
         }
 
+        // Lancement initial
+        preparerSMS();
         updateTracking();
         setInterval(updateTracking, 15000);
     </script>
