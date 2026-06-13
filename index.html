@@ -127,10 +127,10 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
+        // RETOUR À LA MÉTHODE DIRECTE POUR LES SMS
         function envoyerSMS() {
-            const select = document.getElementById('sms-action');
-            const command = select.value;
-            window.location.href = `sms:${NUMERO_MOTO}?body=${command}`;
+            const command = document.getElementById('sms-action').value;
+            window.location.href = "sms:" + NUMERO_MOTO + "?body=" + command;
         }
 
         async function updateTracking() {
@@ -165,18 +165,18 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // Gestion Osmand (Priorité absolue au pourcentage)
+                    // RETOUR À LA LECTURE DIRECTE BRUTE DE LA BATTERIE
                     let voltage = "-";
-                    let attrs = target.attributes || {};
+                    let attrs = target.attributes;
                     
-                    if (attrs.hasOwnProperty('batteryLevel') && parseFloat(attrs.batteryLevel) > 0) {
-                        voltage = attrs.batteryLevel + " %";
-                    } else if (attrs.hasOwnProperty('power') && parseFloat(attrs.power) > 0) {
-                        voltage = parseFloat(attrs.power).toFixed(1) + " V";
-                    } else if (attrs.hasOwnProperty('battery') && parseFloat(attrs.battery) > 0) {
-                        voltage = parseFloat(attrs.battery).toFixed(1) + " V";
-                    } else if (attrs.hasOwnProperty('adc1')) {
-                        voltage = parseFloat(attrs.adc1).toFixed(1) + " V";
+                    if (attrs) {
+                        if (attrs.batteryLevel) {
+                            voltage = attrs.batteryLevel + " %";
+                        } else if (attrs.battery) {
+                            voltage = attrs.battery + " %";
+                        } else if (attrs.power) {
+                            voltage = attrs.power + " V";
+                        }
                     }
 
                     document.getElementById('device-name').innerText = "🏍️ Mon Véhicule";
