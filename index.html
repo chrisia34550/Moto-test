@@ -46,8 +46,8 @@
         .send-btn { 
             width: 100%; background: #3498db; color: white; padding: 12px; border-radius: 10px; 
             border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer;
-            text-decoration: none; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            box-sizing: border-box;
+            text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-sizing: border-box; display: block;
         }
 
         .badge { color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
@@ -82,7 +82,7 @@
 
         <div class="stats-grid">
             <div class="stat-box"><span>Vitesse</span><strong id="speed">0 km/h</strong></div>
-            <div class="stat-box"><span>Batterie Moto</span><strong id="battery-volts">- V</strong></div>
+            <div class="stat-box"><span>Batterie Moto</span><strong id="battery-volts">-</strong></div>
             <div class="stat-box"><span>Distance Jour</span><strong id="day-distance">0.00 km</strong></div>
             <div class="stat-box"><span>Vitesse Max</span><strong id="max-speed">0 km/h</strong></div>
         </div>
@@ -105,17 +105,15 @@
                 <option value="9410000">🟢 Rétablir Relais / Autoriser Démarrage (9410000)</option>
                 <option value="CQ">🔄 Redémarrer le traceur (CQ)</option>
             </select>
-            <a id="send-sms-link" href="#" class="send-btn" onclick="prepareSMS(event)">Envoyer le SMS</a>
+            <button class="send-btn" onclick="envoyerSMS()">Envoyer le SMS</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // METS LE NUMÉRO DE TÉLÉPHONE DE LA CARTE SIM (EX: "0612345678")
         const NUMERO_MOTO = "+33759671722"; 
-
-        // METS TON NOUVEAU JETON BASE64 DEMO4 ICI
         const BASE64_TOKEN = "bWFydGluZWNocmlzQGZyZWUuZnI6NDc3ODAwNkNhPw=="; 
+        const IMEI_MOTO = "9171070882"; 
 
         const map = L.map('map', { zoomControl: false }).setView([43.3614, 3.4167], 15);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -129,18 +127,10 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
-        // Fonction corrigée et nettoyée pour éviter tout blocage
-        function prepareSMS(event) {
+        function envoyerSMS() {
             const select = document.getElementById('sms-action');
             const command = select.value;
-            
-            if (NUMERO_MOTO === "METS_LE_NUMERO_DE_TELEPHONE_ICI") {
-                alert("N'oublie pas de configurer le numéro de téléphone de la carte SIM de la moto !");
-                event.preventDefault();
-                return;
-            }
-            
-            document.getElementById('send-sms-link').href = `sms:${NUMERO_MOTO}?body=${command}`;
+            window.location.href = `sms:${NUMERO_MOTO}?body=${command}`;
         }
 
         async function updateTracking() {
@@ -157,8 +147,9 @@
                 if (!response.ok) throw new Error("Erreur d'authentification");
                 const positions = await response.json();
                 
-                if (positions.length > 0) {
-                    const target = positions[0]; 
+                const target = positions.find(p => String(p.deviceUniqueId) === IMEI_MOTO || String(p.deviceId) === "61250");
+                
+                if (target) {
                     const lat = target.latitude;
                     const lon = target.longitude;
                     const date = new Date(target.fixTime).toLocaleTimeString('fr-FR');
@@ -174,21 +165,19 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
+                    // Gestion Osmand (Priorité absolue au pourcentage)
                     let voltage = "-";
-                    let attrs = target.attributes;
+                    let attrs = target.attributes || {};
                     
-                    if (attrs.hasOwnProperty('power') && attrs.power > 5) {
+                    if (attrs.hasOwnProperty('batteryLevel') && parseFloat(attrs.batteryLevel) > 0) {
+                        voltage = attrs.batteryLevel + " %";
+                    } else if (attrs.hasOwnProperty('power') && parseFloat(attrs.power) > 0) {
                         voltage = parseFloat(attrs.power).toFixed(1) + " V";
-                    } else if (attrs.hasOwnProperty('battery') && attrs.battery > 5) {
+                    } else if (attrs.hasOwnProperty('battery') && parseFloat(attrs.battery) > 0) {
                         voltage = parseFloat(attrs.battery).toFixed(1) + " V";
                     } else if (attrs.hasOwnProperty('adc1')) {
                         voltage = parseFloat(attrs.adc1).toFixed(1) + " V";
-                    } else if (attrs.hasOwnProperty('batteryLevel')) {
-                        voltage = attrs.batteryLevel + " %";
                     }
-
-                    let totalDistance = 0;
-                    if (attrs.distance) totalDistance = (attrs.distance / 1000).toFixed(2);
 
                     document.getElementById('device-name').innerText = "🏍️ Mon Véhicule";
                     document.getElementById('status-badge').innerText = statusText;
@@ -196,7 +185,11 @@
                     document.getElementById('speed').innerText = speedKmh + " km/h";
                     document.getElementById('max-speed').innerText = dailyMaxSpeed + " km/h";
                     document.getElementById('battery-volts').innerText = voltage;
+                    
+                    let totalDistance = 0;
+                    if (attrs.distance) totalDistance = (attrs.distance / 1000).toFixed(2);
                     document.getElementById('day-distance').innerText = totalDistance + " km";
+                    
                     document.getElementById('time').innerText = date;
                     document.getElementById('coords').innerText = lat.toFixed(5) + ", " + lon.toFixed(5);
 
@@ -276,8 +269,10 @@
                 if (!response.ok) return;
                 const positions = await response.json();
 
-                if (positions.length > 0) {
-                    const latLngs = positions.map(p => [p.latitude, p.longitude]);
+                const filteredPositions = positions.filter(p => String(p.deviceUniqueId) === IMEI_MOTO || String(p.deviceId) === "61250");
+
+                if (filteredPositions.length > 0) {
+                    const latLngs = filteredPositions.map(p => [p.latitude, p.longitude]);
                     if (historyLayer) map.removeLayer(historyLayer);
 
                     historyLayer = L.polyline(latLngs, {
