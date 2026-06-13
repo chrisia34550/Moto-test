@@ -37,7 +37,6 @@
         .alert-pill.active-red { background: #fed7d7; color: #e53e3e; border: 1px solid #e53e3e; }
         .alert-pill.active-green { background: #c6f6d5; color: #22543d; }
 
-        /* Style corrigé pour empiler le menu et le bouton proprement sur mobile */
         .action-container { display: flex; flex-direction: column; gap: 10px; margin-top: 5px; width: 100%; box-sizing: border-box; }
         .custom-select { 
             width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e0; 
@@ -97,7 +96,6 @@
             <div id="alert-lowbat" class="alert-pill">🔋 Bat OK</div>
         </div>
 
-        <!-- SECTION MENU DÉROULANT AJUSTÉE -->
         <h3>⚡ Commandes Sinotrack Actives</h3>
         <div class="action-container">
             <select id="sms-action" class="custom-select">
@@ -114,7 +112,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // METS LE NUMÉRO DE LA CARTE SIM DE TA MOTO ICI
-        const NUMERO_MOTO = "+33759671722"; 
+        const NUMERO_MOTO = "TON_NUMERO_DE_PORTABLE_SIM_MOTO"; 
 
         const BASE64_TOKEN = "Y2hyaXNpYWNocmlzQGdtYWlsLmNvbTo0Nzc4MDA2Q2E/"; 
 
@@ -134,7 +132,7 @@
             const select = document.getElementById('sms-action');
             const command = select.value;
             
-            if (NUMERO_MOTO === "TON_NUMERO_DE_PORTABLE_SIM_MOTO") {
+            if (NUMERO_MOTO === "+33759671722") {
                 alert("N'oublie pas de configurer le numéro de téléphone de la moto dans le code !");
                 event.preventDefault();
                 return;
@@ -145,7 +143,8 @@
 
         async function updateTracking() {
             try {
-                const response = await fetch('https://demo.traccar.org/api/positions', {
+                // APPEL SUR LE SERVEUR DEMO4
+                const response = await fetch('https://demo4.traccar.org/api/positions', {
                     method: 'GET',
                     mode: 'cors',
                     headers: { 
@@ -264,7 +263,8 @@
                 const fromTime = today.toISOString();
                 const toTime = new Date().toISOString();
 
-                const response = await fetch(`https://demo.traccar.org/api/positions?from=${fromTime}&to=${toTime}`, {
+                // APPEL SUR LE SERVEUR DEMO4 POUR LE TRACÉ
+                const response = await fetch(`https://demo4.traccar.org/api/positions?from=${fromTime}&to=${toTime}`, {
                     method: 'GET',
                     mode: 'cors',
                     headers: { 
