@@ -37,16 +37,18 @@
         .alert-pill.active-red { background: #fed7d7; color: #e53e3e; border: 1px solid #e53e3e; }
         .alert-pill.active-green { background: #c6f6d5; color: #22543d; }
 
-        /* Style de la section Menu Déroulant / Commandes */
-        .action-container { display: flex; gap: 8px; margin-top: 5px; align-items: center; }
+        /* Style corrigé pour empiler le menu et le bouton proprement sur mobile */
+        .action-container { display: flex; flex-direction: column; gap: 10px; margin-top: 5px; width: 100%; box-sizing: border-box; }
         .custom-select { 
-            flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #cbd5e0; 
+            width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e0; 
             font-size: 0.85rem; background: #f8f9fa; color: #2d3748; outline: none;
+            box-sizing: border-box;
         }
         .send-btn { 
-            background: #3498db; color: white; padding: 10px 16px; border-radius: 10px; 
-            border: none; font-size: 0.85rem; font-weight: bold; cursor: pointer;
+            width: 100%; background: #3498db; color: white; padding: 12px; border-radius: 10px; 
+            border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer;
             text-decoration: none; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-sizing: border-box;
         }
 
         .badge { color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
@@ -95,7 +97,7 @@
             <div id="alert-lowbat" class="alert-pill">🔋 Bat OK</div>
         </div>
 
-        <!-- REPOSITIONNEMENT DU MENU DEROULANT TYPE SINOTRACK -->
+        <!-- SECTION MENU DÉROULANT AJUSTÉE -->
         <h3>⚡ Commandes Sinotrack Actives</h3>
         <div class="action-container">
             <select id="sms-action" class="custom-select">
@@ -105,13 +107,13 @@
                 <option value="9410000">🟢 Rétablir Relais / Autoriser Démarrage (9410000)</option>
                 <option value="CQ">🔄 Redémarrer le traceur (CQ)</option>
             </select>
-            <a id="send-sms-link" href="#" class="send-btn" onclick="prepareSMS(event)">Envoyer</a>
+            <a id="send-sms-link" href="#" class="send-btn" onclick="prepareSMS(event)">Envoyer le SMS</a>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // METS LE NUMÉRO DE LA CARTE SIM DE TA MOTO ICI À LA PLACE DE L'ANCIEN ID BRUT
+        // METS LE NUMÉRO DE LA CARTE SIM DE TA MOTO ICI
         const NUMERO_MOTO = "+33759671722"; 
 
         const BASE64_TOKEN = "Y2hyaXNpYWNocmlzQGdtYWlsLmNvbTo0Nzc4MDA2Q2E/"; 
@@ -128,7 +130,6 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
-        // Fonction pour l'envoi dynamique du SMS basé sur le menu déroulant
         function prepareSMS(event) {
             const select = document.getElementById('sms-action');
             const command = select.value;
@@ -139,7 +140,6 @@
                 return;
             }
             
-            // Met à jour dynamiquement l'attribut href du lien avant l'exécution du clic
             document.getElementById('send-sms-link').href = `sms:${NUMERO_MOTO}?body=${command}`;
         }
 
@@ -174,7 +174,6 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // RECHERCHE DU VOLTAGE SUITE AU COUPLAGE DU NOUVEL ID 09...
                     let voltage = "-";
                     let attrs = target.attributes;
                     
@@ -305,7 +304,7 @@
         }
 
         updateTracking();
-        setInterval(updateTracking, 15000); // Mise à jour automatique en arrière-plan toutes les 15s
+        setInterval(updateTracking, 15000);
     </script>
 </body>
 </html>
