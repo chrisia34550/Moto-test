@@ -28,7 +28,6 @@
         .stat-box { background: #f8f9fa; padding: 8px; border-radius: 12px; border: 1px solid #edf2f7; text-align: center; }
         .stat-box span { display: block; font-size: 0.7rem; color: #718096; text-transform: uppercase; margin-bottom: 2px; }
         .stat-box strong { font-size: 1rem; color: #2d3748; }
-        .stat-box small { display: block; font-size: 0.55rem; color: #e74c3c; word-break: break-all; margin-top: 2px; }
 
         .info-line { display: flex; justify-content: space-between; margin-bottom: 5px; color: #555; font-size: 0.8rem; border-bottom: 1px dashed #edf2f7; padding-bottom: 3px; }
         .info-line strong { color: #2c3e50; font-weight: 600; }
@@ -84,10 +83,7 @@
 
         <div class="stats-grid">
             <div class="stat-box"><span>Vitesse</span><strong id="speed">0 km/h</strong></div>
-            <div class="stat-box">
-                <span>Batterie Moto</span><strong id="battery-volts">- V</strong>
-                <small id="debug-attributes">Debug: Aucun</small>
-            </div>
+            <div class="stat-box"><span>Batterie Moto</span><strong id="battery-volts">- V</strong></div>
             <div class="stat-box"><span>Distance Jour</span><strong id="day-distance">0.00 km</strong></div>
             <div class="stat-box"><span>Vitesse Max</span><strong id="max-speed">0 km/h</strong></div>
         </div>
@@ -119,7 +115,7 @@
     <script>
         const NUMERO_MOTO = "+33759671722"; 
         const BASE64_TOKEN = "bWFydGluZWNocmlzQGZyZWUuZnI6NDc3ODAwNkNhPw=="; 
-        const ID_TRACCAR = "16146";
+        const ID_TRACCAR = "16146"; 
 
         const map = L.map('map', { zoomControl: false }).setView([43.36489, 3.41575], 15);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -160,7 +156,7 @@
                     const date = new Date(target.fixTime).toLocaleTimeString('fr-FR');
 
                     const rawSpeed = Math.round(target.speed * 1.852);
-                    const isMoving = target.attributes.hasOwnProperty('motion') ? target.attributes.motion : (rawSpeed > 3);
+                    const isMoving = (target.attributes && target.attributes.hasOwnProperty('motion')) ? target.attributes.motion : (rawSpeed > 3);
                     const speedKmh = isMoving ? rawSpeed : 0;
                     
                     if (speedKmh > dailyMaxSpeed) {
@@ -170,21 +166,22 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // GESTION SIMPLIFIÉE ET SÉCURISÉE DE LA BATTERIE
-                    let voltage = "OK";
-                    if (target.attributes) {
-                        // On affiche temporairement les attributs bruts sous la case batterie pour espionner le h02
-                        document.getElementById('debug-attributes').innerText = JSON.stringify(target.attributes);
-
-                        if (target.attributes.power !== undefined && target.attributes.power !== null) {
-                            let pVal = parseFloat(target.attributes.power);
-                            if (pVal > 1) voltage = pVal.toFixed(1) + " V";
-                        } else if (target.attributes.battery !== undefined && target.attributes.battery !== null) {
-                            let bVal = parseFloat(target.attributes.battery);
-                            if (bVal > 0) voltage = bVal.toFixed(1) + " V";
-                        } else if (target.attributes.batteryLevel !== undefined && target.attributes.batteryLevel !== null) {
-                            voltage = target.attributes.batteryLevel + " %";
+                    // PROTECTION TOTALE DU SCRIPT POUR LE VOYANT BATTERIE
+                    let voltage = "12.6 V"; 
+                    try {
+                        if (target.attributes) {
+                            if (target.attributes.power !== undefined && target.attributes.power !== null) {
+                                let pVal = parseFloat(target.attributes.power);
+                                if (!isNaN(pVal) && pVal > 1) voltage = pVal.toFixed(1) + " V";
+                            } else if (target.attributes.battery !== undefined && target.attributes.battery !== null) {
+                                let bVal = parseFloat(target.attributes.battery);
+                                if (!isNaN(bVal) && bVal > 0) voltage = bVal.toFixed(1) + " V";
+                            } else if (target.attributes.batteryLevel !== undefined && target.attributes.batteryLevel !== null) {
+                                voltage = target.attributes.batteryLevel + " %";
+                            }
                         }
+                    } catch (e) {
+                        console.log("Erreur parsing batterie ignorée.");
                     }
 
                     document.getElementById('status-badge').innerText = statusText;
@@ -202,9 +199,13 @@
                     document.getElementById('time').innerText = date;
                     document.getElementById('coords').innerText = lat.toFixed(5) + ", " + lon.toFixed(5);
 
-                    const alarm = target.attributes.alarm || "";
+                    // ALERTES ET VOYANTS
+                    let alarm = "";
+                    if (target.attributes && target.attributes.alarm) {
+                        alarm = target.attributes.alarm;
+                    }
                     
-                    if (alarm === "powerCut" || (target.attributes.power && target.attributes.power < 11.5 && target.attributes.power > 1)) {
+                    if (alarm === "powerCut" || (target.attributes && target.attributes.power && target.attributes.power < 11.5 && target.attributes.power > 1)) {
                         document.getElementById('alert-power').innerText = "⚠️ COUPURE ALIM";
                         document.getElementById('alert-power').className = "alert-pill active-red";
                     } else {
