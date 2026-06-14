@@ -43,13 +43,11 @@
             font-size: 0.85rem; background: #f8f9fa; color: #2d3748; outline: none;
             box-sizing: border-box;
         }
-        
-        /* Style du bouton réparé */
         .send-btn { 
             width: 100%; background: #3498db; color: white; padding: 12px; border-radius: 10px; 
             border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer;
             text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            box-sizing: border-box; display: block; text-decoration: none;
+            box-sizing: border-box; display: block;
         }
 
         .badge { color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
@@ -78,13 +76,13 @@
 
     <div class="status-card">
         <div class="info-header">
-            <h2 id="device-name">🏍️ Mon Véhicule</h2>
+            <h2>🏍️ Mon Véhicule</h2>
             <span id="status-badge" class="badge" style="background: #2980b9;">Stationné</span>
         </div>
 
         <div class="stats-grid">
             <div class="stat-box"><span>Vitesse</span><strong id="speed">0 km/h</strong></div>
-            <div class="stat-box"><span>Batterie Moto</span><strong id="battery-volts">-</strong></div>
+            <div class="stat-box"><span>Batterie Moto</span><strong id="battery-volts">- V</strong></div>
             <div class="stat-box"><span>Distance Jour</span><strong id="day-distance">0.00 km</strong></div>
             <div class="stat-box"><span>Vitesse Max</span><strong id="max-speed">0 km/h</strong></div>
         </div>
@@ -100,15 +98,14 @@
 
         <h3>⚡ Commandes Sinotrack Actives</h3>
         <div class="action-container">
-            <select id="sms-action" class="custom-select" onchange="preparerSMS()">
+            <select id="sms-action" class="custom-select">
                 <option value="RCONF">📋 Demander la configuration actuelle (RCONF)</option>
                 <option value="6690000">📍 Demander Position SMS Actuelle (6690000)</option>
                 <option value="9400000">🛑 Coupure Relais / Arrêt Moteur (9400000)</option>
                 <option value="9410000">🟢 Rétablir Relais / Autoriser Démarrage (9410000)</option>
                 <option value="CQ">🔄 Redémarrer le traceur (CQ)</option>
             </select>
-            
-            <a id="send-sms-link" href="sms:+33759671722?body=RCONF" class="send-btn">Envoyer le SMS</a>
+            <button class="send-btn" onclick="envoyerSMS()">Envoyer le SMS</button>
         </div>
     </div>
 
@@ -116,7 +113,7 @@
     <script>
         const NUMERO_MOTO = "+33759671722"; 
         const BASE64_TOKEN = "bWFydGluZWNocmlzQGZyZWUuZnI6NDc3ODAwNkNhPw=="; 
-        const IMEI_MOTO = "9171070882"; 
+        const ID_TRACCAR = "61250"; 
 
         const map = L.map('map', { zoomControl: false }).setView([43.36489, 3.41575], 15);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -130,11 +127,10 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
-        // MISE À JOUR DYNAMIQUE DU LIEN SMS POUR ÉVITER LE BLOCAGE CHROME
-        function preparerSMS() {
+        // RETOUR À LA MÉTHODE UNIQUE ET DIRECTE POUR LES SMS
+        function envoyerSMS() {
             const command = document.getElementById('sms-action').value;
-            const link = document.getElementById('send-sms-link');
-            link.href = "sms:" + NUMERO_MOTO + "?body=" + command;
+            window.location.href = "sms:" + NUMERO_MOTO + "?body=" + command;
         }
 
         async function updateTracking() {
@@ -148,11 +144,11 @@
                     }
                 });
                 
-                if (!response.ok) throw new Error("Erreur API Traccar");
+                if (!response.ok) throw new Error("Erreur de connexion");
                 const positions = await response.json();
                 
-                // On cible l'ID d'appareil 61250 correspondant à ta session active
-                const target = positions.find(p => String(p.deviceId) === "61250" || String(p.deviceUniqueId) === IMEI_MOTO);
+                // Ciblage direct et strict de ton boîtier SinoTrack
+                const target = positions.find(p => String(p.deviceId) === ID_TRACCAR);
                 
                 if (target) {
                     const lat = target.latitude;
@@ -170,16 +166,14 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // CALCUL ET LECTURE DE LA BATTERIE MOTO / INTERNE
+                    // RETOUR À LA LECTURE DU CHAMP BRUT POWER POUR LA BATTERIE MOTO
                     let voltage = "- V";
-                    let attrs = target.attributes || {};
-                    
-                    if (attrs.power !== undefined) {
-                        voltage = parseFloat(attrs.power).toFixed(1) + " V";
-                    } else if (attrs.battery !== undefined) {
-                        voltage = parseFloat(attrs.battery).toFixed(1) + " V";
-                    } else if (attrs.batteryLevel !== undefined) {
-                        voltage = attrs.batteryLevel + " %";
+                    if (target.attributes) {
+                        if (target.attributes.power !== undefined) {
+                            voltage = parseFloat(target.attributes.power).toFixed(1) + " V";
+                        } else if (target.attributes.battery !== undefined) {
+                            voltage = parseFloat(target.attributes.battery).toFixed(1) + " V";
+                        }
                     }
 
                     document.getElementById('status-badge').innerText = statusText;
@@ -189,15 +183,17 @@
                     document.getElementById('battery-volts').innerText = voltage;
                     
                     let totalDistance = 0;
-                    if (attrs.distance) totalDistance = (attrs.distance / 1000).toFixed(2);
+                    if (target.attributes && target.attributes.distance) {
+                        totalDistance = (target.attributes.distance / 1000).toFixed(2);
+                    }
                     document.getElementById('day-distance').innerText = totalDistance + " km";
                     
                     document.getElementById('time').innerText = date;
                     document.getElementById('coords').innerText = lat.toFixed(5) + ", " + lon.toFixed(5);
 
-                    const alarm = attrs.alarm || "";
+                    const alarm = target.attributes.alarm || "";
                     
-                    if (alarm === "powerCut" || (attrs.power && attrs.power < 11.5)) {
+                    if (alarm === "powerCut" || (target.attributes.power && target.attributes.power < 11.5)) {
                         document.getElementById('alert-power').innerText = "⚠️ COUPURE ALIM";
                         document.getElementById('alert-power').className = "alert-pill active-red";
                     } else {
@@ -270,7 +266,7 @@
 
                 if (!response.ok) return;
                 const positions = await response.json();
-                const filteredPositions = positions.filter(p => String(p.deviceId) === "61250");
+                const filteredPositions = positions.filter(p => String(p.deviceId) === ID_TRACCAR);
 
                 if (filteredPositions.length > 0) {
                     const latLngs = filteredPositions.map(p => [p.latitude, p.longitude]);
@@ -299,8 +295,6 @@
             }
         }
 
-        // Lancement initial
-        preparerSMS();
         updateTracking();
         setInterval(updateTracking, 15000);
     </script>
