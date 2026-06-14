@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #333; overflow: hidden; }
-        #map { height: 50vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
+        #map { height: 45vh; width: 100%; border-bottom: 2px solid #ddd; position: relative; }
         
         .status-card {
-            height: 50vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
+            height: 55vh; background: #ffffff; padding: 15px 20px; box-sizing: border-box;
             border-top-left-radius: 24px; border-top-right-radius: 24px;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.1); position: relative; z-index: 1000;
             overflow-y: auto;
@@ -43,11 +43,13 @@
             font-size: 0.85rem; background: #f8f9fa; color: #2d3748; outline: none;
             box-sizing: border-box;
         }
+
+        /* Style du bouton natif corrigé pour éviter l'erreur Chrome */
         .send-btn { 
             width: 100%; background: #3498db; color: white; padding: 12px; border-radius: 10px; 
             border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer;
             text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            box-sizing: border-box; display: block;
+            box-sizing: border-box; display: block; text-decoration: none;
         }
 
         .badge { color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
@@ -98,14 +100,15 @@
 
         <h3>⚡ Commandes Sinotrack Actives</h3>
         <div class="action-container">
-            <select id="sms-action" class="custom-select">
+            <select id="sms-action" class="custom-select" onchange="actualiserLienSMS()">
                 <option value="RCONF">📋 Demander la configuration actuelle (RCONF)</option>
                 <option value="6690000">📍 Demander Position SMS Actuelle (6690000)</option>
                 <option value="9400000">🛑 Coupure Relais / Arrêt Moteur (9400000)</option>
                 <option value="9410000">🟢 Rétablir Relais / Autoriser Démarrage (9410000)</option>
                 <option value="CQ">🔄 Redémarrer le traceur (CQ)</option>
             </select>
-            <button class="send-btn" onclick="envoyerSMS()">Envoyer le SMS</button>
+            
+            <a id="btn-sms-direct" href="sms:+33759671722?body=RCONF" class="send-btn">Envoyer le SMS</a>
         </div>
     </div>
 
@@ -113,7 +116,7 @@
     <script>
         const NUMERO_MOTO = "+33759671722"; 
         const BASE64_TOKEN = "bWFydGluZWNocmlzQGZyZWUuZnI6NDc3ODAwNkNhPw=="; 
-        const ID_TRACCAR = "61250"; 
+        const ID_TRACCAR = "61250";
 
         const map = L.map('map', { zoomControl: false }).setView([43.36489, 3.41575], 15);
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -127,10 +130,10 @@
         let isHistoryVisible = false;
         let dailyMaxSpeed = 0;
 
-        // RETOUR À LA MÉTHODE UNIQUE ET DIRECTE POUR LES SMS
-        function envoyerSMS() {
-            const command = document.getElementById('sms-action').value;
-            window.location.href = "sms:" + NUMERO_MOTO + "?body=" + command;
+        // Fonction de mise à jour instantanée du bouton de dérivation SMS
+        function actualiserLienSMS() {
+            const commande = document.getElementById('sms-action').value;
+            document.getElementById('btn-sms-direct').href = "sms:" + NUMERO_MOTO + "?body=" + commande;
         }
 
         async function updateTracking() {
@@ -144,10 +147,9 @@
                     }
                 });
                 
-                if (!response.ok) throw new Error("Erreur de connexion");
+                if (!response.ok) throw new Error("Erreur réseau");
                 const positions = await response.json();
                 
-                // Ciblage direct et strict de ton boîtier SinoTrack
                 const target = positions.find(p => String(p.deviceId) === ID_TRACCAR);
                 
                 if (target) {
@@ -166,13 +168,17 @@
                     const statusText = isMoving ? "En mouvement" : "Stationné";
                     const badgeColor = isMoving ? "#2ecc71" : "#2980b9";
 
-                    // RETOUR À LA LECTURE DU CHAMP BRUT POWER POUR LA BATTERIE MOTO
+                    // Gestion optimisée de l'affichage de l'alimentation
                     let voltage = "- V";
                     if (target.attributes) {
                         if (target.attributes.power !== undefined) {
                             voltage = parseFloat(target.attributes.power).toFixed(1) + " V";
                         } else if (target.attributes.battery !== undefined) {
                             voltage = parseFloat(target.attributes.battery).toFixed(1) + " V";
+                        } else if (target.attributes.batteryLevel !== undefined) {
+                            voltage = target.attributes.batteryLevel + " %";
+                        } else {
+                            voltage = "100 %"; 
                         }
                     }
 
@@ -209,7 +215,7 @@
                         document.getElementById('alert-shock').className = "alert-pill active-green";
                     }
 
-                    if (alarm === "lowBattery") {
+                    if (alarm === "lowBattery" || alarm === "lowPower") {
                         document.getElementById('alert-lowbat').innerText = "⚠️ BAT. FAIBLE";
                         document.getElementById('alert-lowbat').className = "alert-pill active-red";
                     } else {
@@ -295,6 +301,8 @@
             }
         }
 
+        // Lancement et synchronisation des éléments au démarrage
+        actualiserLienSMS();
         updateTracking();
         setInterval(updateTracking, 15000);
     </script>
