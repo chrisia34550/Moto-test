@@ -97,19 +97,27 @@
             <div id="alert-lowbat" class="alert-pill">🔋 Bat OK</div>
         </div>
 
-        <h3>⚡ Commandes Sinotrack Actives</h3>
+      <h3>⚡ Commandes Sinotrack Actives</h3>
         <div class="action-container">
             <select id="sms-action" class="custom-select" onchange="actualiserLienSMS()">
-                <option value="RCONF">📋 Demander la configuration actuelle (RCONF)</option>
-                <option value="6690000">📍 Demander Position SMS Actuelle (6690000)</option>
+                <!-- Commandes de Statut -->
+                <option value="RCONF">📋 Demander la configuration (RCONF)</option>
+                <option value="STATUS">📊 Demander le Statut Global (STATUS)</option>
+                <option value="6690000">📍 Position SMS instantanée (6690000)</option>
+                
+                <!-- Actions de Sécurité Antivol -->
                 <option value="9400000">🛑 Coupure Relais / Arrêt Moteur (9400000)</option>
                 <option value="9410000">🟢 Rétablir Relais / Autoriser Démarrage (9410000)</option>
-                <option value="CQ">🔄 Redémarrer le traceur (CQ)</option>
+                <option value="GEOFENCE,0.5">🛡️ Activer Alarme Périmètre 500m (GEOFENCE)</option>
+                <option value="NOGEOFENCE">🔓 Désactiver l'alarme Périmètre (NOGEOFENCE)</option>
+                
+                <!-- Gestion de la mise en veille (Préservation Batterie Moto) -->
+                <option value="SLEEP,2">💤 Mode Veille sur Choc (Économie Batterie)</option>
+                <option value="SLEEP,0">🔥 Désactiver la Veille (Actif 24h/24)</option>
             </select>
             
             <a id="btn-sms-direct" href="sms:+33759671722?body=RCONF" class="send-btn">Envoyer le SMS</a>
         </div>
-    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
